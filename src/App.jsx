@@ -22,6 +22,7 @@ function App() {
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isFirstFetch, setIsFirstFetch] = useState(true);
+  const [totalResults, setTotalResults] = useState(null);
 
   const fetchImages = useCallback(async () => {
     try {
@@ -38,6 +39,7 @@ function App() {
         },
       });
       setImages(prev => [...prev, ...response.data.results]);
+      setTotalResults(response.data.total);
       setIsFirstFetch(false);
     } catch {
       setError('Failed to load images');
@@ -60,25 +62,38 @@ function App() {
     setImages([]);
     setPage(1);
     setIsFirstFetch(true);
+    setTotalResults(null);
   };
+
+  const handleLoadMore = () => {
+    setLoading(true);
+    setPage(prev => prev + 1);
+  };
+
+  const noResults = !loading && !error && images.length === 0 && !isFirstFetch;
+  const allImagesLoaded = totalResults !== null && images.length >= totalResults && !noResults;
 
   return (
     <div>
       <Toaster />
       <SearchBar onSubmit={handleSearch} icon={<FiSearch />} />
 
+      {images.length > 0 && <ImageGallery images={images} onImageClick={setSelectedImage} />}
+
       {loading && <Loader />}
 
-      {!loading && !error && images.length === 0 && !isFirstFetch && (
+      {noResults && (
         <ErrorMessage message="No images found for your request." />
       )}
 
       {error && <ErrorMessage message={error} />}
 
-      <ImageGallery images={images} onImageClick={setSelectedImage} />
+      {images.length > 0 && !loading && !allImagesLoaded && (
+        <LoadMoreBtn onClick={handleLoadMore} />
+      )}
 
-      {images.length > 0 && !loading && (
-        <LoadMoreBtn onClick={() => setPage(prev => prev + 1)} />
+      {allImagesLoaded && !loading && (
+        <ErrorMessage message="All images have been loaded." />
       )}
 
       <ImageModal image={selectedImage} onClose={() => setSelectedImage(null)} />
